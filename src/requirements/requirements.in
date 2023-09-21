@@ -1,3 +1,4 @@
 python-decouple
 boto3
 pymongo
+black # just for code formatting
