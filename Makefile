@@ -15,3 +15,9 @@ clean:
     docker compose down
 
 
+importer_config:
+	@cd aws && \
+	export TF_TRAIL_BUCKET=$$(terraform output -raw cloud_trail_bucket_name) && \
+	export TF_TRAIL_BUCKET_REGION=$$(terraform output -raw cloud_trail_bucket_region) && \
+	echo "Bucket: $$TF_TRAIL_BUCKET" && \
+	echo "Bucket Region: $$TF_TRAIL_BUCKET_REGION"
