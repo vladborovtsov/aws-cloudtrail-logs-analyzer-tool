@@ -21,6 +21,10 @@ def config_logs_path() -> str:
     return config("LOGS_PATH")
 
 
+def config_logs_delete_imported_files_from_s3() -> bool:
+    return config("DELETE_FROM_S3", default=False)
+
+
 def config_mongo_host() -> str:
     return config("MONGO_HOST")
 
@@ -37,5 +41,9 @@ def config_mongo_db() -> str:
     return config("MONGO_DB")
 
 
-def config_mongo_collection() -> str:
-    return config("MONGO_COLLECTION")
+def config_mongo_collection_logs() -> str:
+    return config("MONGO_COLLECTION_LOGS", default="cloudtrail")
+
+
+def config_mongo_collection_metadata() -> str:
+    return config("MONGO_COLLECTION_METADATA", default="metadata")
