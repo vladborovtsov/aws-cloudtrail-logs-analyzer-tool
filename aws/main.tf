@@ -3,9 +3,9 @@ resource "aws_cloudtrail" "debug-trail" {
   s3_bucket_name                = aws_s3_bucket.cloud-trail-bucket.id
   s3_key_prefix                 = "prefix"
   include_global_service_events = true
-  is_multi_region_trail = true
+  is_multi_region_trail         = true
 
-   advanced_event_selector {
+  advanced_event_selector {
     name = "Log all S3 objects events except cloud trail logs bucket"
 
     field_selector {
@@ -17,8 +17,8 @@ resource "aws_cloudtrail" "debug-trail" {
       field = "resources.ARN"
 
       not_starts_with = [
-         aws_s3_bucket.cloud-trail-bucket.arn
-       ]
+        aws_s3_bucket.cloud-trail-bucket.arn
+      ]
     }
 
     field_selector {
