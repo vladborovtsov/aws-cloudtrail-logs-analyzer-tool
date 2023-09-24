@@ -27,9 +27,10 @@ The main components of this project are:
 ## Setup
 
 1. **Install Dependencies**
-   \```
+
+   ```sh
    pip install -r requirements/requirements.txt
-   \```
+   ```
 
 2. **Environment Variables**
 
@@ -37,13 +38,14 @@ The main components of this project are:
 
 3. **Docker Compose**
    - Navigate to the `docker` directory and run:
-     \```
+     ```sh
      docker-compose up
-     \```
+     ```
 
 ## Usage
 
 Run the main script:
-\```
+
+```sh
 python logs_importer/main.py
-\```
+```
