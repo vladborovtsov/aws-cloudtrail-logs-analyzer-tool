@@ -1,3 +1,3 @@
 #!/usr/bin/env sh
 
-pip-compile ./requirements.in
+pip-compile --resolver=backtracking ./requirements.in
