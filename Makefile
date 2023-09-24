@@ -12,8 +12,7 @@ clean:
 	cd aws; \
 	terraform destroy -auto-approve
 	cd ./docker; \
-    docker compose down
-
+	docker compose down
 
 importer_config:
 	@cd aws && \
