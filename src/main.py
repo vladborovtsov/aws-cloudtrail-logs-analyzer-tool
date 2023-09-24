@@ -1,50 +1,45 @@
+import gzip
 import json
+import logging
 from urllib.parse import quote_plus
 
 import boto3
 import pymongo
-from config import (
-    config_logs_path,
-    config_logs_bucket,
-    config_aws_region,
-    config_mongo_host,
-    config_mongo_user,
-    config_mongo_password,
-    config_mongo_db,
-    config_mongo_collection_logs,
-    config_mongo_collection_metadata,
-    config_logs_delete_imported_files_from_s3,
-)
-import gzip
-import logging
+
+import logs_importer.config as Configuration
 
 logging.basicConfig(level=logging.INFO)
 
 
 class LogsImporter:
-    def __init__(self):
-        self.s3_client = boto3.client("s3", region_name=config_aws_region())
+    def __init__(self, config: dict[str, str] | bool):
+        self.s3_client = boto3.client("s3", region_name=config["aws_region"])
         self.mongo_uri = "mongodb://%s:%s@%s" % (
-            quote_plus(config_mongo_user()),
-            quote_plus(config_mongo_password()),
-            config_mongo_host(),
+            quote_plus(config["mongo_user"]),
+            quote_plus(config["mongo_password"]),
+            config["mongo_host"],
         )
         self.mongo_client = pymongo.MongoClient(self.mongo_uri)
-        self.mongo_db = self.mongo_client[config_mongo_db()]
-        self.logs_collection = self.mongo_db[config_mongo_collection_logs()]
-        self.metadata_collection = self.mongo_db[config_mongo_collection_metadata()]
+        self.mongo_db = self.mongo_client[config["mongo_db"]]
+
+        self.logs_collection = self.mongo_db[config["mongo_collection_logs"]]
+        self.metadata_collection = self.mongo_db[config["mongo_collection_metadata"]]
+
+        self.logs_bucket = config["logs_bucket"]
+        self.logs_path = config["logs_path"]
+        self.remove_imported_s3_files = config["remove_imported_s3_files"]
 
     def fetch_logs_list(self) -> list[str]:
         response = self.s3_client.list_objects_v2(
-            Bucket=config_logs_bucket(), Prefix=config_logs_path()
+            Bucket=self.logs_bucket, Prefix=self.logs_path
         )
         return [
             content["Key"]
             for content in response.get("Contents", [])
-            if "Key" in content and content["Key"] != config_logs_path()
+            if "Key" in content and content["Key"] != self.logs_path
         ]
 
-    def s3_needs_import(self, s3_obj, key) -> bool:
+    def s3_needs_import(self, s3_obj: dict[str, str], key: str) -> bool:
         name = key
         content_length = s3_obj["ContentLength"]
         # last_modified = s3_obj["LastModified"] # TODO: i have some doubts its really needed: logs are always growing.
@@ -77,7 +72,7 @@ class LogsImporter:
     def import_logs(self):
         for s3_file_name in self.fetch_logs_list():
             s3_obj = self.s3_client.get_object(
-                Bucket=config_logs_bucket(), Key=s3_file_name
+                Bucket=self.logs_bucket, Key=s3_file_name
             )
 
             if not self.s3_needs_import(s3_obj, s3_file_name):
@@ -95,22 +90,24 @@ class LogsImporter:
                 log_json = json.loads(log)
                 records: list = log_json["Records"]
 
-                if type(records) == list:
+                if records is None:
+                    raise ValueError("Records field is missing in the log.")
+
+                if isinstance(records, list):
                     for item in records:
-                        q = {"eventID": item["eventID"]}
-                        self.logs_collection.replace_one(q, item, upsert=True)
+                        query = {"eventID": item["eventID"]}
+                        # Replace existing record with new data or insert if it doesn't exist
+                        self.logs_collection.replace_one(query, item, upsert=True)
                         # col.insert_one(item)
+
                 else:
-                    # I never caught it yet.
-                    print("OOPS!")
-                    exit(1)
+                    # Raise an exception if records are not in the expected list format
+                    raise TypeError("The Records field is not a list.")
                     # col.replace_one(query, document, upsert=True)
                     # col.insert_one(records) # this is performannt by doesnt work in my case.
 
-            if config_logs_delete_imported_files_from_s3():
-                self.s3_client.delete_object(
-                    Bucket=config_logs_bucket(), Key=s3_file_name
-                )
+            if self.remove_imported_s3_files:
+                self.s3_client.delete_object(Bucket=self.logs_bucket, Key=s3_file_name)
 
         logging.info(
             "Total records: %s", self.logs_collection.estimated_document_count()
@@ -119,4 +116,17 @@ class LogsImporter:
 
 
 if __name__ == "__main__":
-    LogsImporter().import_logs()
+    default_config = {
+        "aws_region": Configuration.aws_region(),
+        "logs_bucket": Configuration.logs_bucket(),
+        "logs_path": Configuration.logs_path(),
+        "remove_imported_s3_files": Configuration.remove_imported_s3_files(),
+        "mongo_db": Configuration.mongo_db(),
+        "mongo_host": Configuration.mongo_host(),
+        "mongo_password": Configuration.mongo_password(),
+        "mongo_user": Configuration.mongo_user(),
+        "mongo_collection_logs": Configuration.mongo_collection_logs(),
+        "mongo_collection_metadata": Configuration.mongo_collection_metadata(),
+    }
+
+    LogsImporter(config=default_config).import_logs()
