@@ -40,9 +40,11 @@ resource "aws_cloudtrail" "debug-trail" {
 
 
 resource "aws_s3_bucket" "cloud-trail-bucket" {
-  bucket        = "cloud-trail-bucket-14092023-1"
+  bucket        = "cloud-trail-bucket-${random_uuid.uuid.result}"
   force_destroy = true
 }
+
+resource "random_uuid" "uuid" {}
 
 data "aws_iam_policy_document" "cloud-trail-bucket-policy" {
   statement {
@@ -106,7 +108,6 @@ provider "aws" {
   default_tags {
     tags = {
       Project              = "CloudTrailDebugStuff"
-      Replica              = true
       ManagedWithTerraform = true
     }
   }
