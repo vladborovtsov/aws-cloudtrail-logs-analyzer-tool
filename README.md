@@ -1,3 +1,10 @@
+# Archive
+
+Note: As of April 20, 2025, this project is no longer actively maintained. The AWS Console now provides a user-friendly interface with a broader range of features, which covers the functionality of this project. Therefore, this repository has been archived.
+
+
+
+
 # Logs Importer Project
 
 ## Introduction
